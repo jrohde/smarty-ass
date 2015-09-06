@@ -14,8 +14,9 @@ It can be useful for big projects with a lot of several small CSS and JS files.
 
 **PHP code**
 
-```$js_filelist = array('/js/core.js','/js/slideviewer.js');
-$smarty_object->assign('js_files', $js_filelist);```
+```$js_filelist = array('/js/core.js','/js/slideviewer.js');```
+
+```$smarty_object->assign('js_files', $js_filelist);```
 
 **Template code**
 
