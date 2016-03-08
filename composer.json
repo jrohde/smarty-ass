@@ -1,0 +1,21 @@
+
+{
+    "name": "dead23angel/smarty-combine",
+    "description": "Combine and minify many JS or CSS to one file.",
+    "license": "MIT",
+    "keywords": [
+        "smarty",
+        "minify"
+    ],
+    "authors": [
+        {
+            "name": "Gorochov Ivan",
+            "homepage": "https://github.com/dead23angel",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "smarty/smarty": "~3.1"
+    }
+}
