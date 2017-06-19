@@ -1,6 +1,6 @@
 
 {
-    "name": "rohde/smarty-ass",
+    "name": "jrohde/smarty-ass",
     "description": "Bundle and minify JS and/or CSS files.",
     "keywords": ["smarty","plugin","assets","bundle","minify"],
     "homepage": "https://github.com/jrohde/smarty-ass",
