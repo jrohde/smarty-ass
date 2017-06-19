@@ -1,29 +1,45 @@
-Smarty Combine
-==============
+# Smarty 3+ plugin to bundle and minify js and/or css files.
 
-Combine plugin allows concatenating several js or css files into one. 
-It can be useful for big projects with a lot of several small CSS and JS files.
+This Smarty plugin uses the follwing libraries to do it's minifications:
 
-###Usage examples
+*For CSS: https://github.com/tubalmartin/YUI-CSS-compressor-PHP-port
+*For JS: https://github.com/tedious/JShrink
 
-**Template inline example Smarty 3**
+**Table of Contents**
 
-```{combine input=array('/bm.js','/bm2.js') output='/cache/big.js' age='30' debug=false}```
+1.  [Installation](#install)
+2.  [Usage & parameters](#usage)
 
-**Smarty 2 example**
 
-**PHP code**
+<a name="install"></a>
 
-```$js_filelist = array('/js/core.js','/js/slideviewer.js');```
+### Installation
 
-```$smarty_object->assign('js_files', $js_filelist);```
+Use [Composer](http://getcomposer.org/) to include the library into your project:
 
-**Template code**
+    $ composer.phar require jrohde/smarty-ass
 
-```{combine input=$js_files output='/cache/big.js' age='30' debug=false}```
+Now add the plugin dir to your Smarty instance:
 
-**Plugin have 3 parametrs:**
-* **input** - must be an array, containing list with absolute pathes to files. In Smarty 3 it can be inline array, for Smarty 2 you will need to pass from yours controller a variable, which will contains this array.
-* **output** - absolute path to output file. Directory must be writable to www daemon (Usually chmod 777 resolve this problem :)
-* **age** - value of seconds between checks when original files were changed. By default it is 3600 - one hour. You can omit this parameter.
-* **debug** - parameter in the value of TRUE, disable compilation useful for debugging when developing a site.. By default it is FALSE. You can omit this parameter.
+```$smarty = new \Smarty();
+$smarty->addPluginsDir('./path/to/vendor/rohdej/smarty-ass/');```
+
+You can check if the correct path was added by using:
+
+```var_dump($smarty->getPluginsDir());```
+
+
+<a name="usage"></a>
+
+### Usage & parameters
+
+## Usage (in Smarty 3+ templates)
+
+```{ass input=['file1.js','file2.js') output='/assets/combined_and_minified.js' age='3600' debug=false}```
+
+## Parameters
+
+* **input** - array with absolute path to js OR css files (don't mix them!).
+* **output** - (optional) absolute path to output file (writable by the webserver/php). If not given it will
+* **age** - (optional) TTL of cached files. Default is 31536000 - 1 year.
+* **debug** - (optional) parameter in the value of TRUE, disable compilation useful for debugging when developing a site.. By default it is FALSE. You can omit this parameter.

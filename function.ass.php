@@ -7,16 +7,17 @@
  */
 
 /**
- * Smarty combine function plugin
+ * Smarty CSS/JS bundle and minify function plugin
  *
  * Type:    function<br>
- * Name:    combine<br>
- * Date:    September 5, 2015
- * Purpose: Combine content from several JS or CSS files into one
- * Input:   string to count
- * Example: {count input=$array_of_files_to_combine output=$path_to_output_file age=$seconds_to_try_recombine_file}
+ * Name:    ass<br>
+ * Date:    June 13, 2017
+ * Purpose: Bundle and minify JS and/or CSS files
+ * Input:   string to ass
+ * Example: {ass input=['file1.js','file2.js'] output='/assets/combined.js' age='3600'}
  *
- * @author Gorochov Ivan <dead23angel at gmail dot com>
+ * @author Joost Rohde <j.rohde@nederland.live>
+ * @basedOn https://github.com/dead23angel/smarty-combine
  * @version 1.0
  * @param array
  * @param string
@@ -24,18 +25,18 @@
  * @return string
  */
 
-function smarty_function_combine($params, &$smarty)
-{
-    require_once dirname(__FILE__) . '/minify/JSmin.php';
-    require_once dirname(__FILE__) . '/minify/CSSmin.php';
+use tubalmartin\CssMin\Minifier as CSSmin;
+use JShrink\Minifier as JSmin;
 
+function smarty_function_ass($params, &$smarty)
+{
     /**
      * Build combined file
      *
      * @param array $params
      */
-    if ( ! function_exists('smarty_build_combine')) {
-        function smarty_build_combine($params)
+    if ( ! function_exists('smarty_build_ass')) {
+        function smarty_build_ass($params)
         {
             $filelist = array();
             $lastest_mtime = 0;
@@ -50,9 +51,9 @@ function smarty_function_combine($params, &$smarty)
                 $output_filename = '';
                 foreach ($filelist as $file) {
                     if ($params['type'] == 'js') {
-                        $output_filename .= '<script type="text/javascript" src="//' . getenv('SERVER_NAME') . $file['name'].'" charset="utf-8"></script>' . "\n";
+                        $output_filename .= '<script type="text/javascript" src="'.$file['name'].'" charset="utf-8"></script>' . "\n";
                     } elseif ($params['type'] == 'css') {
-                        $output_filename .= '<link type="text/css" rel="stylesheet" href="//' . getenv('SERVER_NAME') . $file['name'] . '" />' . "\n";
+                        $output_filename .= '<link type="text/css" rel="stylesheet" href="'.$file['name'].'" />' . "\n";
                     }
                 }
 
@@ -91,14 +92,15 @@ function smarty_function_combine($params, &$smarty)
                         $min = '';
 
                         if ($params['type'] == 'js') {
-                            $min = JSMin::minify(file_get_contents(getenv('DOCUMENT_ROOT') . $file['name']));
+                            $compressor = new JSmin();
+                            $min = JSmin::minify(file_get_contents(getenv('DOCUMENT_ROOT') . $file['name']), array('flaggedComments' => false));
                         } elseif ($params['type'] == 'css') {
-                            $min = CSSMin::minify(file_get_contents(getenv('DOCUMENT_ROOT') . $file['name']));
+                            $compressor = new CSSmin(false);
+                            $min = $compressor->run(file_get_contents(getenv('DOCUMENT_ROOT') . $file['name']));
                         } else {
                             fputs($fh, PHP_EOL . PHP_EOL . '/* ' . $file['name'] . ' @ ' . date('c', $file['time']) . ' */' . PHP_EOL . PHP_EOL);
                             $min = file_get_contents(getenv('DOCUMENT_ROOT') . $file['name']);
                         }
-
                         fputs($fh, $min);
                     }
 
@@ -147,7 +149,7 @@ function smarty_function_combine($params, &$smarty)
     }
 
     if ( ! is_array($params['input']) || count($params['input']) < 1) {
-        trigger_error('input must be array and have one item at least', E_USER_NOTICE);
+        trigger_error('input must be array and have at least one item', E_USER_NOTICE);
         return;
     }
 
@@ -175,11 +177,13 @@ function smarty_function_combine($params, &$smarty)
     $params['type'] = $ext;
 
     if ( ! isset($params['output'])) {
-        $params['output'] = dirname($params['input'][0]) . '/combined.' . $ext;
+        //$params['output'] = dirname($params['input'][0]) . '/combined.' . $ext;
+        //$params['output'] = '/assets/combined.' . $ext;
+        $params['output'] = '/assets/'.$_SERVER['REQUEST_URI'].'/combined.' . $ext;
     }
 
     if ( ! isset($params['age'])) {
-        $params['age'] = 3600;
+        $params['age'] = 31536000; // looooong caching
     }
 
     if ( ! isset($params['cache_file_name'])) {
@@ -187,20 +191,20 @@ function smarty_function_combine($params, &$smarty)
     }
 
     if ( ! isset($params['debug'])) {
-        $params['debug'] = false;
+        $params['debug'] = DEBUG;
     }
 
     $cache_file_name = $params['cache_file_name'];
 
     if ($params['debug'] == true || ! file_exists(getenv('DOCUMENT_ROOT') . $cache_file_name)) {
-        smarty_build_combine($params);
+        smarty_build_ass($params);
         return;
     }
 
     $cache_mtime = filemtime(getenv('DOCUMENT_ROOT') . $cache_file_name);
 
     if ($cache_mtime + $params['age'] < time()) {
-        smarty_build_combine($params);
+        smarty_build_ass($params);
     } else {
         smarty_print_out($params);
     }

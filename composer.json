@@ -1,21 +1,32 @@
 
 {
-    "name": "dead23angel/smarty-combine",
-    "description": "Combine and minify many JS or CSS to one file.",
+    "name": "rohde/smarty-ass",
+    "description": "Bundle and minify JS and/or CSS files.",
+    "keywords": ["smarty","plugin","assets","bundle","minify"],
+    "homepage": "https://github.com/jrohde/smarty-ass",
     "license": "MIT",
-    "keywords": [
-        "smarty",
-        "minify"
-    ],
     "authors": [
         {
-            "name": "Gorochov Ivan",
-            "homepage": "https://github.com/dead23angel",
+            "name": "J. Rohde",
+            "email": "j.rohde@nederland.live",
+            "homepage": "https://github.com/jrohde",
             "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/jrohde/smarty-ass/issues",
+        "source": "https://github.com/jrohde/smarty-ass"
+    },
+    "repositories": [
+        {
+        "type": "vcs",
+        "url": "https://github.com/tedious/JShrink"
         }
     ],
     "require": {
         "php": ">=5.3.0",
-        "smarty/smarty": "~3.1"
+        "smarty/smarty": "~3.1",
+        "tubalmartin/cssmin": "^4.1",
+        "tedivm/jshrink": "dev-master"
     }
 }
