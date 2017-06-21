@@ -9,203 +9,225 @@
 /**
  * Smarty CSS/JS bundle and minify function plugin
  *
- * Type:    function<br>
- * Name:    ass<br>
- * Date:    June 13, 2017
+ * Type:    function
+ * Name:    ass
+ * Date:    June 21, 2017
  * Purpose: Bundle and minify JS and/or CSS files
  * Input:   string to ass
- * Example: {ass input=['file1.js','file2.js'] output='/assets/combined.js' age='3600'}
+ * Example: {ass in=['file1.js','file2.js'] out='/assets/combined.js' gzip='true' ttl='3600' debug='false'}
  *
  * @author Joost Rohde <j.rohde@nederland.live>
- * @basedOn https://github.com/dead23angel/smarty-combine
- * @version 1.0
+ * @version 1.0.1
  * @param array
  * @param string
  * @param int
  * @return string
  */
 
-use tubalmartin\CssMin\Minifier as CSSmin;
-use JShrink\Minifier as JSmin;
+use MatthiasMullie\Minify;
 
-function smarty_function_ass($params, &$smarty)
+function smarty_function_ass(array $params, Smarty_Internal_Template $template)
 {
-    /**
-     * Build combined file
-     *
-     * @param array $params
-     */
+
+    # defaults
+    $ttl   = 31536000;
+    $gzip  = false;
+    $debug = false;
+
+
     if ( ! function_exists('smarty_build_ass')) {
         function smarty_build_ass($params)
         {
-            $filelist = array();
-            $lastest_mtime = 0;
-
-            foreach ($params['input'] as $item) {
-                $mtime = filemtime(getenv('DOCUMENT_ROOT') . $item);
-                $lastest_mtime = max($lastest_mtime, $mtime);
-                $filelist[] = array('name' => $item, 'time' => $mtime);
+            # cleanup
+            $old = preg_replace('/\.(js|css)$/i', '_*.$1', $params['out']);
+            $clean = glob($params['doc_root'].$old);
+            foreach ($clean as $cf) {
+                if (is_file($cf)) { unlink($cf); }
             }
-
-            if ($params['debug'] == true) {
-                $output_filename = '';
-                foreach ($filelist as $file) {
-                    if ($params['type'] == 'js') {
-                        $output_filename .= '<script type="text/javascript" src="'.$file['name'].'" charset="utf-8"></script>' . "\n";
-                    } elseif ($params['type'] == 'css') {
-                        $output_filename .= '<link type="text/css" rel="stylesheet" href="'.$file['name'].'" />' . "\n";
-                    }
+            # prepare output
+            $timestamp = time();
+            $params['ass_file'] = preg_replace('/\.(js|css)$/i','_'.$timestamp.'.$1', $params['out']);
+            $dirname = dirname($params['doc_root'] . $params['ass_file']);
+            if (!is_dir($dirname)) {
+                mkdir($dirname, 0755, true);
+            }
+            # minify and bundle
+            $context = stream_context_create(array('http' => array('user_agent' => $_SERVER['HTTP_USER_AGENT'], 'ignore_errors' => true)));
+            $dr = $params['doc_root'];
+            $assets = array_map(function($v) use($dr) {
+                if($v['type'] == 'file') {
+                    $v['src'] = $dr.$v['src'];
+                } elseif ($v['type'] == 'url') {
+                    $v['src'] = file_get_contents($v['src'], false, $context);
                 }
-
-                echo $output_filename;
-                return;
-            }
-
-            $last_cmtime = 0;
-
-            if (file_exists(getenv('DOCUMENT_ROOT') . $params['cache_file_name'])) {
-                $last_cmtime = file_get_contents(getenv('DOCUMENT_ROOT') . $params['cache_file_name']);
-            }
-
-            if ($lastest_mtime > $last_cmtime) {
-                $glob_mask = preg_replace('/\.(js|css)$/i', '_*.$1', $params['output']);
-                $files_to_cleanup = glob(getenv('DOCUMENT_ROOT') . $glob_mask);
-
-                foreach ($files_to_cleanup as $cfile) {
-                    if (is_file($cfile) && file_exists($cfile)) {
-                        unlink($cfile);
-                    }
-                }
-
-                $output_filename = preg_replace('/\.(js|css)$/i', date('_YmdHis.', $lastest_mtime) . '$1', $params['output']);
-
-                $dirname = dirname(getenv('DOCUMENT_ROOT') . $output_filename);
-
-                if ( ! is_dir($dirname)) {
-                    mkdir($dirname, 0755, true);
-                }
-
-                $fh = fopen(getenv('DOCUMENT_ROOT') . $output_filename, 'a+');
-
-                if (flock($fh, LOCK_EX)) {
-                    foreach ($filelist as $file) {
-                        $min = '';
-
-                        if ($params['type'] == 'js') {
-                            $compressor = new JSmin();
-                            $min = JSmin::minify(file_get_contents(getenv('DOCUMENT_ROOT') . $file['name']), array('flaggedComments' => false));
-                        } elseif ($params['type'] == 'css') {
-                            $compressor = new CSSmin(false);
-                            $min = $compressor->run(file_get_contents(getenv('DOCUMENT_ROOT') . $file['name']));
-                        } else {
-                            fputs($fh, PHP_EOL . PHP_EOL . '/* ' . $file['name'] . ' @ ' . date('c', $file['time']) . ' */' . PHP_EOL . PHP_EOL);
-                            $min = file_get_contents(getenv('DOCUMENT_ROOT') . $file['name']);
-                        }
-                        fputs($fh, $min);
-                    }
-
-                    flock($fh, LOCK_UN);
-                    file_put_contents(getenv('DOCUMENT_ROOT') . $params['cache_file_name'], $lastest_mtime, LOCK_EX);
-                }
-
-                fclose($fh);
-                clearstatcache();
-            }
-
-            touch(getenv('DOCUMENT_ROOT') . $params['cache_file_name']);
-            smarty_print_out($params);
-        }
-    }
-
-    /**
-     * Print filename
-     *
-     * @param string $params
-     */
-    if ( ! function_exists('smarty_print_out')) {
-        function smarty_print_out($params)
-        {
-            $last_mtime = 0;
-
-            if (file_exists(getenv('DOCUMENT_ROOT') . $params['cache_file_name'])) {
-                $last_mtime = file_get_contents(getenv('DOCUMENT_ROOT') . $params['cache_file_name']);
-            }
-
-            $output_filename = preg_replace('/\.(js|css)$/i', date('_YmdHis.', $last_mtime) . '$1', $params['output']);
-
+                return $v['src'];
+            }, $params['assets']);
             if ($params['type'] == 'js') {
-                echo '<script type="text/javascript" src="' . $output_filename . '" charset="utf-8"></script>';
+                $minifier = new Minify\JS($assets);
             } elseif ($params['type'] == 'css') {
-                echo '<link type="text/css" rel="stylesheet" href="' . $output_filename . '" />';
+                $minifier = new Minify\CSS($assets);
+            }
+            unset($assets);
+            # save minified and bundled file to disk
+            if($params['gzip']) {
+                $minifier->gzip($params['doc_root'] . $params['ass_file']);
             } else {
-                echo $output_filename;
+                $minifier->minify($params['doc_root'] . $params['ass_file']);
+            }
+            # save the new mtime cache file to disk
+            $cache = array_map(function($v) {
+                if ($v['type'] == 'inline') { unset($v['src']); }
+                return $v;
+            }, $params['assets']);
+            $cache['timestamp'] = $timestamp;
+            file_put_contents($params['doc_root'] . $params['cache_file'], json_encode($cache), LOCK_EX);
+            # output
+            smarty_print_ass($params);
+        }
+    }
+
+    /*
+     * name: smarty_print_ass
+     * @param array
+     * @return string
+     *
+     */
+    if (!function_exists('smarty_print_ass')) {
+        function smarty_print_ass($params) {
+            if ($params['type'] == 'js') {
+                echo '<script type="text/javascript" src="'.$params['ass_file'].'" charset="utf-8"></script>';
+            } elseif ($params['type'] == 'css') {
+                echo '<link type="text/css" rel="stylesheet" href="'.$params['ass_file'].'" />';
             }
         }
     }
 
-    if ( ! isset($params['input'])) {
+    /*
+     * name: smarty_debug_ass
+     * @param array
+     * @return string
+     *
+     */
+    if (!function_exists('smarty_debug_ass')) {
+        function smarty_debug_ass($params) {
+            $output = '';
+            foreach ($params['assets'] as $k => $v) {
+                if ($params['type'] == 'js') {
+                    if($v['type'] == 'inline') {
+                        $output .= "<script type='text/javascript' charset='utf-8'>\n".$v['src']."\n</script>"."\n";
+                    } else {
+                        $output .= '<script type="text/javascript" src="'.$v['src'].'" charset="utf-8"></script>'."\n";
+                    }
+                } elseif ($params['type'] == 'css') {
+                    if($v['type'] == 'inline') {
+                        $output .= "<style>\n".$v['src']."\n</style>"."\n";
+                    } else {
+                        $output .= '<link type="text/css" rel="stylesheet" href="'.$v['src'].'" />'."\n";
+                    }
+                }
+            }
+            echo $output;
+            return;
+        }
+    }
+
+    # set environment parameters
+    $params['doc_root'] = getenv('DOCUMENT_ROOT');
+    # start parameter 'in' checks
+    if (!isset($params['in'])) {
         trigger_error('input cannot be empty', E_USER_NOTICE);
         return;
     }
-
-    if ( ! is_array($params['input']) || count($params['input']) < 1) {
+    if (!is_array($params['in']) || count($params['in']) < 1) {
         trigger_error('input must be array and have at least one item', E_USER_NOTICE);
         return;
     }
-
-    foreach ($params['input'] as $file) {
-        if ( ! file_exists(getenv('DOCUMENT_ROOT') . $file)) {
-            trigger_error('File ' . getenv('DOCUMENT_ROOT') . $file . ' does not exist!', E_USER_WARNING);
+    # validate and cleanup input
+    $params['assets'] = $extensions = [];
+    $tag_count = $url_count = 0;
+    foreach ($params['in'] as $file) {
+        # check for external files
+        if (filter_var($file, FILTER_VALIDATE_URL)) {
+            $params['assets'][] = [
+                'type' => 'url',
+                'src' => $file
+            ];
+        } elseif (preg_match('/.*<(script|style).*?>(.*?)<\/(script|style)>.*/ius', $file)) {
+            $params['assets'][] = [
+                'type' => 'inline',
+                'hash' => md5($file),
+                'src' => trim(preg_replace('/.*(<script|style).*?>(.*?)<\/(script|style)>.*/ius', '$2', $file))
+            ];
+        } elseif (!file_exists($params['doc_root'] . $file)) {
+            trigger_error('File '.$params['doc_root'].$file.' does not exist!', E_USER_WARNING);
             return;
+        } else {
+            $ext = pathinfo($file, PATHINFO_EXTENSION);
+            if (!in_array($ext, array('js', 'css'))) {
+                trigger_error('all input files must have js or css extension', E_USER_NOTICE);
+                return;
+            }
+            $extensions[] = $ext;
+            $params['assets'][] = [
+                'type' => 'file',
+                'src' => $file,
+                'mtime' => filemtime($params['doc_root'].$file)
+            ];
         }
-
-        $ext = pathinfo($file, PATHINFO_EXTENSION);
-
-        if ( ! in_array($ext, array('js', 'css'))) {
-            trigger_error('all input files must have js or css extension', E_USER_NOTICE);
-            return;
-        }
-
-        $files_extensions[] = $ext;
     }
-
-    if (count(array_unique($files_extensions)) > 1) {
+    unset($params['in']);
+    # start extension check
+    if (count(array_unique($extensions)) > 1) {
         trigger_error('all input files must have the same extension', E_USER_NOTICE);
         return;
     }
-
     $params['type'] = $ext;
-
-    if ( ! isset($params['output'])) {
-        //$params['output'] = dirname($params['input'][0]) . '/combined.' . $ext;
-        //$params['output'] = '/assets/combined.' . $ext;
-        $params['output'] = '/assets/'.$_SERVER['REQUEST_URI'].'/combined.' . $ext;
+    # start parameter 'debug' checks
+    if (!isset($params['debug'])) {
+        $params['debug'] = $debug;
     }
-
-    if ( ! isset($params['age'])) {
-        $params['age'] = 31536000; // looooong caching
-    }
-
-    if ( ! isset($params['cache_file_name'])) {
-        $params['cache_file_name'] = $params['output'] . '.cache';
-    }
-
-    if ( ! isset($params['debug'])) {
-        $params['debug'] = DEBUG;
-    }
-
-    $cache_file_name = $params['cache_file_name'];
-
-    if ($params['debug'] == true || ! file_exists(getenv('DOCUMENT_ROOT') . $cache_file_name)) {
-        smarty_build_ass($params);
+    if ($params['debug'] == true) {
+        smarty_debug_ass($params);
         return;
     }
-
-    $cache_mtime = filemtime(getenv('DOCUMENT_ROOT') . $cache_file_name);
-
-    if ($cache_mtime + $params['age'] < time()) {
-        smarty_build_ass($params);
-    } else {
-        smarty_print_out($params);
+    # start parameter 'out' checks
+    if (!isset($params['out'])) {
+        $s = $template->getTemplateDir();
+        array_push($s, 'file:','.html');
+        $params['out'] = '/assets/'.$ext.'/'.str_replace(array_reverse($s), [], $template->getTemplateResource()).'/combined.' . $ext;
     }
+    # start parameter 'ttl' check
+    if (!isset($params['ttl'])) {
+        $params['ttl'] = $ttl; // looooong caching
+    }
+    # start parameter 'gzip' check
+    if (!isset($params['gzip'])) {
+        $params['gzip'] = $gzip;
+    }
+    # check for cache existence
+    $build = true;
+    $params['cache_file'] = $params['out'] . '.cache';
+    if (file_exists($params['doc_root'].$params['cache_file'])) {
+        $build = false;
+        $cache = json_decode(file_get_contents($params['doc_root'].$params['cache_file']), true);
+        # set initial output file based on cached timestamp
+        $params['ass_file'] = preg_replace('/\.(js|css)$/i','_'.$cache['timestamp'].'.$1', $params['out']);
+        unset($cache['timestamp']);
+        # start checking if there are changes
+        if(count($cache) !== count($params['assets'])) { // quick diff count check
+            $build = true;
+        } else { // array compare check
+            $current = array_map(function ($v) {
+                if ($v['type'] == 'inline') { unset($v['src']); }
+                return $v;
+            }, $params['assets']);
+            if($cache !== $current) { $build = true; }
+        }
+        # check if past TTL (based on mtime of the cache file)
+        if (filemtime($params['doc_root'] . $params['cache_file']) + $params['ttl'] < time()) {
+            $build = true;
+        }
+    }
+    # check what to do and do it!
+    $build ? smarty_build_ass($params) : smarty_print_ass($params);
 }
