@@ -8,7 +8,7 @@ It automatically checks for (JS/CSS) file/code changes and then rebuild's the mi
 **Table of Contents**
 
 1.  [Installation](#install)
-2.  [Parameters] (#params)
+2.  [Parameters](#params)
 3.  [Usage/Examples](#usage)
 
 
