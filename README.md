@@ -1,14 +1,15 @@
 # Smarty 3+ plugin to bundle and minify js and/or css files.
 
-This Smarty plugin uses [Matthias Mullie's ' Minify](https://github.com/matthiasmullie/minify) library to do it's minifications and bundling.
+This Smarty plugin uses [Matthias Mullie's Minify](https://github.com/matthiasmullie/minify) library to do it's minifications and bundling.
 
-It's automatically checks for (JS/CSS) file changes and then rebuild's the minified/bundled output file.
+It automatically checks for (JS/CSS) file/code changes and then rebuild's the minified/bundled output file.
 
 
 **Table of Contents**
 
 1.  [Installation](#install)
-2.  [Paremeters & Usage](#usage)
+2.  [Parameters] ](#params)
+3.  [Usage/Examples](#usage)
 
 
 <a name="install"></a>
@@ -32,28 +33,23 @@ You can check if the correct path was added by using:
 var_dump($smarty->getPluginsDir());
 ```
 
+<a name="params"></a>
+### Parameters
+
+- **in** (array) - absolute path('s) to local JS or CCS files, inline <script/> or <style/> tags and/or external JS or css files.
+- **out** (string) - absolute path to the minified and bundled file output (must be writable by the webserver/php user!). This parameter is optional and defaults to '/assets/(js/css)/${smarty_template_name}_combined.(css/js)'.
+- **ttl** (integer) - time to live in of cached files in seconds. This is the maximum time a minified/combined file may exist before a complete rebuild. Note that when source files are modified the output file is regenerated, regardless of this value. This parameter is optional and defaults to '31536000' (a.k.a: 1 year).
+- **gzip** (boolean) - gzip's the output file. Make sure your PHP/Webserver supports this! This parameter is optional and defaults to 'false'
+- **debug** (boolean) - disables compilation and just output all as normal if set to: 'true'. This parameter is optional and defaults to 'false'
 
 <a name="usage"></a>
-
-### Parameters & Usage
-
-
-## Parameters
-
-- **in** - array, absolute path('s) to js OR css files.
-- **out** - string, absolute path to the minified and bundled file output (must be writable by the webserver/php user!). This parameter is optional and defaults to '/assets/(js/css)/${smarty_template_name}_combined.(css/js)'.
-- **ttl** - integer, time to live of cached files. This is the maximum time a minified/combined file may exist before a complete rebuild. Note that when source files are modified the output file is regenerated, regardless of this value. This parameter is optional and defaults to '31536000' (a.k.a: 1 year).
-- **gzip** - boolean, gzip's the output file. Make sure your PHP/Webserver supports this! This parameter is optional and defaults to 'false'
-- **debug** - boolean, disables compilation and just output all as normal if set to: 'true'. This parameter is optional and defaults to 'false'
-
-
-## Usage (in Smarty 3+ templates)
+### Usage (in Smarty 3+ templates)
 
 ```
 {ass in=['file1.js','file2.js'] out='/assets/combined_and_minified.js' ttl='3600' gzip='false' debug=false}
 ```
 
-You may also use external/cdn's like so:
+You may also use external js/css/cdn's like:
 
 ```
 {ass in=[
@@ -62,7 +58,7 @@ You may also use external/cdn's like so:
 ] out='/assets/combined_and_minified.js' ttl='3600' gzip='false' debug=false}
 ```
 
-Use inline JS or Javscript (make sure to escape single/double quotes where needed!):
+Use/add inline css or js (but make sure to escape single/double quotes!):
 
 ```
 {ass in=["
@@ -83,5 +79,5 @@ Or even mix it all together:
     '<script>
         var cool = \'awesome\';
     </script>'
-] out='/assets/combined_and_minified.js' ttl='3600' gzip='false' debug=false}
+] out='/assets/combined_and_minified.js' gzip='true'}
 ```
