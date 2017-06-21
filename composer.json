@@ -1,7 +1,7 @@
 
 {
     "name": "jrohde/smarty-ass",
-    "description": "Bundle and minify JS and/or CSS files.",
+    "description": "Bundle and minify JS and/or CSS files on the fly.",
     "keywords": ["smarty","plugin","assets","bundle","minify"],
     "homepage": "https://github.com/jrohde/smarty-ass",
     "license": "MIT",
@@ -17,16 +17,9 @@
         "issues": "https://github.com/jrohde/smarty-ass/issues",
         "source": "https://github.com/jrohde/smarty-ass"
     },
-    "repositories": [
-        {
-        "type": "vcs",
-        "url": "https://github.com/tedious/JShrink"
-        }
-    ],
     "require": {
         "php": ">=5.3.0",
         "smarty/smarty": "~3.1",
-        "tubalmartin/cssmin": "^4.1",
-        "tedivm/jshrink": "dev-master"
+        "matthiasmullie/minify": "^1.3"
     }
 }
