@@ -8,12 +8,12 @@ It automatically checks for (JS/CSS) file/code changes and then rebuild's the mi
 **Table of Contents**
 
 1.  [Installation](#install)
-2.  [Parameters] ](#params)
+2.  [Parameters] (#params)
 3.  [Usage/Examples](#usage)
 
 
-<a name="install"></a>
 
+<a name="install"></a>
 ### Installation
 
 Use [Composer](http://getcomposer.org/) to include the library into your project:
