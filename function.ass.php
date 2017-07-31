@@ -32,7 +32,7 @@ function smarty_function_ass(array $params, Smarty_Internal_Template $template)
     # defaults
     $ttl   = 31536000;
     $gzip  = false;
-    $debug = false;
+    $debug = defined('DEBUG') ? DEBUG : false;
 
 
     if ( ! function_exists('smarty_build_ass')) {
@@ -148,11 +148,18 @@ function smarty_function_ass(array $params, Smarty_Internal_Template $template)
     foreach ($params['in'] as $file) {
         # check for external files
         if (filter_var($file, FILTER_VALIDATE_URL)) {
+            $ext = pathinfo(parse_url($file,PHP_URL_PATH),PATHINFO_EXTENSION);
+            if (!in_array($ext, array('js', 'css'))) {
+                trigger_error('all input files must have js or css extension', E_USER_NOTICE);
+                return;
+            }
+            $extensions[] = $ext;
             $params['assets'][] = [
                 'type' => 'url',
                 'src' => $file
             ];
-        } elseif (preg_match('/.*<(script|style).*?>(.*?)<\/(script|style)>.*/ius', $file)) {
+        } elseif (preg_match('/.*<(script|style).*?>(.*?)<\/(script|style)>.*/ius', $file, $matches)) {
+            $extensions[] = ($matches[1] == 'script') ? 'js' : 'css';
             $params['assets'][] = [
                 'type' => 'inline',
                 'hash' => md5($file),
